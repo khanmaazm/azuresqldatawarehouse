@@ -1,0 +1,108 @@
+1) Create Table products (productid int, productname VARCHAR(500), unitprice FLOAT, supplierid FLOAT) 
+With (Clustered Columnstore index, distribution = REPLICATE)
+
+2) COPY INTO products (productid, productname, unitprice, supplierid) 
+FROM 'https://azuremonitorstorageacct.blob.core.windows.net/data/Products.csv'
+WITH (FILE_TYPE = 'CSV', ROWTERMINATOR='0x0a', FIRSTROW = 2)
+
+3) select * from products
+
+4) select * from DimCurrency
+
+5) Create Table orders(orderid	int, ordernumber varchar(150), customerid int, orderdate date, totalamount float) 
+with (Clustered Columnstore index, DISTRIBUTion = ROUND_ROBIN)
+
+6) COPY INTO orders(orderid, ordernumber, customerid, orderdate, totalamount) 
+FROM 'https://azuremonitorstorageacct.blob.core.windows.net/data/Orders.csv'
+WITH (FILE_TYPE = 'CSV', ROWTERMINATOR='0x0a', FIRSTROW = 2, DATEFORMAT = 'dmy')
+
+7) Create Table orderitems(orderlineid	int, orderid int, productid	int,  unitprice float, quantity float)
+with (Clustered Columnstore index, DISTRIBUTion = HASH(orderid))
+
+8) COPY INTO orderitems(orderlineid, orderid, productid, unitprice, quantity) 
+FROM 'https://azuremonitorstorageacct.blob.core.windows.net/data/OrderItems.csv'
+WITH (FILE_TYPE = 'CSV', ROWTERMINATOR='0x0a', FIRSTROW = 2)
+
+9) Create Statistics statordprodid on orders(orderdate)
+
+10)
+CREATE DATABASE SCOPED CREDENTIAL exttableorditems
+WITH IDENTITY = 'SHARED ACCESS SIGNATURE',
+SECRET = 'iyKx6g2WXNPp+a3ICvMd33oo6UsycaS8ereBnfYs2Sgau2gFMeNBGqDdblJpxIsHj8C7/lqyU5tgU4jkDnlVGw==';
+
+CREATE EXTERNAL DATA SOURCE testexternaltablesstgacct
+    WITH (
+        TYPE = HADOOP,
+        LOCATION = 'wasbs://testexttablecontainer@testexternaltables.blob.core.windows.net',
+        CREDENTIAL = exttableorditems
+    );
+
+CREATE EXTERNAL FILE FORMAT csvFileFormat WITH (  
+      FORMAT_TYPE = DELIMITEDTEXT,
+      FORMAT_OPTIONS (FIELD_TERMINATOR =',',
+            USE_TYPE_DEFAULT = TRUE, FIRST_ROW = 2))  
+
+CREATE EXTERNAL TABLE orderitemexternaltbl (  
+      orderlineid	int,
+      orderid int,
+      productid int,	
+      unitprice	float,
+      quantity float
+)  
+WITH (LOCATION='OrderItems.csv',
+      DATA_SOURCE = testexternaltablesstgacct,  
+      FILE_FORMAT = csvFileFormat 
+);  
+
+
+
+1
+CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'Bismillah786K';
+
+2
+CREATE DATABASE SCOPED CREDENTIAL blobdataproviderblobstgacct1
+WITH IDENTITY = 'SHARED ACCESS SIGNATURE',
+SECRET = 'vXR/9u/vG/ir+S9gkeaLFgsqwMMiJJVMkiV2TCYzrWlyJZf1bY9snFNrboTznt0+tIaWqUcDlpBju1NuXN1IPA==';
+
+
+3
+DROP EXTERNAL DATA SOURCE myblobstgazure1
+CREATE EXTERNAL DATA SOURCE myblobstgazure1
+    WITH (
+        TYPE = HADOOP,
+        LOCATION = 'wasbs://firstblobcontainer@dataproviderblobstgacct.blob.core.windows.net',
+        CREDENTIAL = blobdataproviderblobstgacct1
+    );
+
+4
+DROP  EXTERNAL FILE FORMAT TcsvFileFormat
+CREATE EXTERNAL FILE FORMAT TcsvFileFormat WITH (  
+      FORMAT_TYPE = DELIMITEDTEXT,
+      FORMAT_OPTIONS (FIELD_TERMINATOR =',',
+            USE_TYPE_DEFAULT = TRUE, FIRST_ROW = 2))  
+5
+DROP EXTERNAL TABLE dbo.sampleequationdiags
+CREATE EXTERNAL TABLE [dbo].[sampleequationdiags] (  
+      X	 decimal(38,10),
+	  Noise	 decimal(38,10),
+	  Y1	 decimal(38,10),
+	  Y2	 decimal(38,10),
+	  Y3	 decimal(38,10),
+	  Y4	 decimal(38,10),
+	  Y5	 decimal(38,10),
+	  Y6	 decimal(38,10)
+)  
+WITH (LOCATION='/simplefile/',
+      DATA_SOURCE = myblobstgazure1,  
+      FILE_FORMAT = TcsvFileFormat  
+);  
+
+6
+select * from [sampleequationdiags]
+
+
+6) #Use in SQL On Demand
+SELECT * 
+FROM OPENROWSET (BULK 'https://azuremonitorstorageacct.blob.core.windows.net/data/Orders.csv', FORMAT = 'CSV', parser_version = '2.0', firstrow = 2) 
+with (orderid int, ordernumber int, customerid int, orderdate varchar(150), totalamt float) 
+AS taborders WHERE orderid < 1000
